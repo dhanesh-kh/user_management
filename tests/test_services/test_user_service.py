@@ -250,3 +250,9 @@ async def test_search_users_by_date_range_no_results(db_session):
     result_users = await UserService.search_users(db_session, search_params=search_params)
     assert len(result_users) == 0
 
+# Test case insensitive username search
+async def test_search_users_by_username_case_insensitivity(db_session, specific_nickname_user: User):
+    search_params = UserFilter(username="SPECIFIC_NICKNAME")
+    result_users = await UserService.search_users(db_session, search_params=search_params)
+    print("Result Users:", [user.nickname for user in result_users])  # Debug output
+    assert any(user.nickname == "specific_nickname" for user in result_users), "No user found with the username matching case-insensitive search"

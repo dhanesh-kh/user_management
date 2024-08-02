@@ -233,7 +233,7 @@ async def test_search_users_by_partial_username_match(db_session, specific_nickn
     result_users = await UserService.search_users(db_session, search_params=search_params)
     print("Result Users:", [user.nickname for user in result_users])  # Debug output
     assert any(user.nickname == "specific_nickname" for user in result_users), "No user found with a partial username match"
-    
+
 # Test partial email search
 async def test_search_users_by_partial_email_match(db_session, specific_email_user: User):
     search_params = UserFilter(email="specific_email")
@@ -241,4 +241,12 @@ async def test_search_users_by_partial_email_match(db_session, specific_email_us
     print("Result Users:", [user.email for user in result_users])  # Debug output
     assert any(user.email == "specific_email@example.com" for user in result_users), "No user found with a partial email match"
 
+# Test no results with date range search
+async def test_search_users_by_date_range_no_results(db_session):
+    now = datetime.utcnow().date()
+    start_date = now + timedelta(days=10)
+    end_date = now + timedelta(days=20)
+    search_params = UserFilter(start_date=start_date, end_date=end_date)
+    result_users = await UserService.search_users(db_session, search_params=search_params)
+    assert len(result_users) == 0
 

@@ -208,3 +208,9 @@ async def test_search_users_by_date_range(db_session, users_with_dates):
     search_params = UserFilter(start_date=start_date, end_date=end_date)
     result_users = await UserService.search_users(db_session, search_params=search_params)
     assert all(start_date <= user.created_at.date() <= end_date for user in result_users)
+
+# Test search with no results
+async def test_search_users_with_no_results(db_session):
+    search_params = UserFilter(username="non_existent_nickname")
+    result_users = await UserService.search_users(db_session, search_params=search_params)
+    assert len(result_users) == 0

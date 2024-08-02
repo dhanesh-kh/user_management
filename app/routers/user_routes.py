@@ -27,7 +27,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies import get_current_user, get_db, get_email_service, require_role
 from app.schemas.pagination_schema import EnhancedPagination
 from app.schemas.token_schema import TokenResponse
-from app.schemas.user_schemas import LoginRequest, UserBase, UserCreate, UserListResponse, UserResponse, UserUpdate
+from app.schemas.user_schemas import LoginRequest, UserBase, UserCreate, UserFilter, UserListResponse, UserResponse, UserUpdate
 from app.services.user_service import UserService
 from app.services.jwt_service import create_access_token
 from app.utils.link_generation import create_user_links, generate_pagination_links
@@ -245,3 +245,29 @@ async def verify_email(user_id: UUID, token: str, db: AsyncSession = Depends(get
     if await UserService.verify_email_with_token(db, user_id, token):
         return {"message": "Email verified successfully"}
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification token")
+
+@router.get("/users/search/", response_model=UserListResponse, tags=["User Management Requires (Admin or Manager Roles)"])
+async def search_users(
+    request: Request,
+    search_params: UserFilter = Depends(),
+    skip: int = 0,
+    limit: int = 10,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_role(["ADMIN", "MANAGER"]))
+):
+    total_users = await UserService.count_filtered_users(db, search_params)
+    users = await UserService.search_users(db, search_params, skip, limit)
+
+    user_responses = [
+        UserResponse.model_validate(user) for user in users
+    ]
+    
+    pagination_links = generate_pagination_links(request, skip, limit, total_users)
+    
+    return UserListResponse(
+        items=user_responses,
+        total=total_users,
+        page=skip // limit + 1,
+        size=len(user_responses),
+        links=pagination_links
+    )

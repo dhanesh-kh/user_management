@@ -1,8 +1,10 @@
 from builtins import range
+from datetime import datetime, timedelta
 import pytest
 from sqlalchemy import select
 from app.dependencies import get_settings
 from app.models.user_model import User, UserRole
+from app.schemas.user_schemas import UserFilter
 from app.services.user_service import UserService
 from app.utils.nickname_gen import generate_nickname
 
@@ -161,3 +163,48 @@ async def test_unlock_user_account(db_session, locked_user):
     assert unlocked, "The account should be unlocked"
     refreshed_user = await UserService.get_by_id(db_session, locked_user.id)
     assert not refreshed_user.is_locked, "The user should no longer be locked"
+
+# Test search users by username
+async def test_search_users_by_username(db_session, specific_nickname_user: User):
+    search_params = UserFilter(username="specific_nickname")
+    result_users = await UserService.search_users(db_session, search_params=search_params)
+    print("Result Users:", [user.nickname for user in result_users])  # Debug output
+    assert any(user.nickname == "specific_nickname" for user in result_users), "No user found with the nickname 'specific_nickname'"
+
+
+# Test search users by email
+async def test_search_users_by_username(db_session, specific_nickname_user: User):
+    search_params = UserFilter(username="specific_nickname")
+    result_users = await UserService.search_users(db_session, search_params=search_params)
+    print("Result Users:", [user.nickname for user in result_users])  # Debug output
+    assert any(user.nickname == "specific_nickname" for user in result_users), "No user found with the nickname 'specific_nickname'"
+
+# Test search users by role
+async def test_search_users_by_role(db_session, role_user: User):
+    search_params = UserFilter(role="MANAGER")
+    result_users = await UserService.search_users(db_session, search_params=search_params)
+    print("Result Users:", [user.role.name for user in result_users])  # Debug output
+    assert any(user.role == UserRole.MANAGER for user in result_users), "No user found with the role 'MANAGER'"
+
+# Test search users by locked account
+async def test_search_users_by_account_status_locked(db_session, locked_and_unlocked_users):
+    search_params = UserFilter(account_status="locked")
+    result_users = await UserService.search_users(db_session, search_params=search_params)
+    print("Result Users:", [user.nickname for user in result_users])  # Debug output
+    assert any(user.is_locked for user in result_users), "No user found with 'locked' account status"
+
+# Test search users by unlocked account
+async def test_search_users_by_account_status_unlocked(db_session, locked_and_unlocked_users):
+    search_params = UserFilter(account_status="unlocked")
+    result_users = await UserService.search_users(db_session, search_params=search_params)
+    print("Result Users:", [user.nickname for user in result_users])  # Debug output
+    assert any(not user.is_locked for user in result_users), "No user found with 'unlocked' account status"
+
+# Test search with given date range
+async def test_search_users_by_date_range(db_session, users_with_dates):
+    now = datetime.utcnow().date()
+    start_date = now - timedelta(days=5)
+    end_date = now
+    search_params = UserFilter(start_date=start_date, end_date=end_date)
+    result_users = await UserService.search_users(db_session, search_params=search_params)
+    assert all(start_date <= user.created_at.date() <= end_date for user in result_users)

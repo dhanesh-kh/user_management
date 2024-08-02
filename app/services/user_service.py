@@ -3,12 +3,12 @@ from datetime import datetime, timezone
 import secrets
 from typing import Optional, Dict, List
 from pydantic import ValidationError
-from sqlalchemy import func, null, update, select
+from sqlalchemy import func, null, update, select, or_, and_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies import get_email_service, get_settings
 from app.models.user_model import User
-from app.schemas.user_schemas import UserCreate, UserUpdate
+from app.schemas.user_schemas import UserCreate, UserUpdate, UserFilter
 from app.utils.nickname_gen import generate_nickname
 from app.utils.security import generate_verification_token, hash_password, verify_password
 from uuid import UUID
@@ -199,3 +199,46 @@ class UserService:
             await session.commit()
             return True
         return False
+
+    @classmethod
+    async def search_users(cls, session: AsyncSession, search_params: UserFilter, skip: int = 0, limit: int = 10) -> List[User]:
+        query = select(User).offset(skip).limit(limit)
+        
+        if search_params.username:
+            query = query.where(User.nickname.ilike(f"%{search_params.username}%"))
+        if search_params.email:
+            query = query.where(User.email.ilike(f"%{search_params.email}%"))
+        if search_params.role:
+            query = query.where(User.role == UserRole[search_params.role.upper()])
+        if search_params.account_status is not None:
+            if search_params.account_status == "locked":
+                query = query.where(User.is_locked.is_(True))
+            elif search_params.account_status == "unlocked":
+                query = query.where(User.is_locked.is_(False))
+        if search_params.start_date and search_params.end_date:
+            query = query.where(and_(User.created_at >= search_params.start_date, User.created_at <= search_params.end_date))
+
+        result = await cls._execute_query(session, query)
+        return result.scalars().all() if result else []
+
+    @classmethod
+    async def count_filtered_users(cls, session: AsyncSession, search_params: UserFilter) -> int:
+        query = select(func.count()).select_from(User)
+        
+        if search_params.username:
+            query = query.where(User.nickname.ilike(f"%{search_params.username}%"))
+        if search_params.email:
+            query = query.where(User.email.ilike(f"%{search_params.email}%"))
+        if search_params.role:
+            query = query.where(User.role == UserRole[search_params.role.upper()])
+        if search_params.account_status is not None:
+            if search_params.account_status == "locked":
+                query = query.where(User.is_locked.is_(True))
+            elif search_params.account_status == "unlocked":
+                query = query.where(User.is_locked.is_(False))
+        if search_params.start_date and search_params.end_date:
+            query = query.where(and_(User.created_at >= search_params.start_date, User.created_at <= search_params.end_date))
+
+        result = await cls._execute_query(session, query)
+        count = result.scalar()
+        return count

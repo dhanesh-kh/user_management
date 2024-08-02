@@ -1,7 +1,7 @@
 from builtins import ValueError, any, bool, str
 from pydantic import BaseModel, EmailStr, Field, validator, root_validator
 from typing import Optional, List
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
 import uuid
 import re
@@ -81,3 +81,11 @@ class UserListResponse(BaseModel):
     total: int = Field(..., example=100)
     page: int = Field(..., example=1)
     size: int = Field(..., example=10)
+
+class UserFilter(BaseModel):
+    username: Optional[str] = None
+    email: Optional[str] = None
+    role: Optional[str] = None
+    account_status: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None

@@ -15,7 +15,7 @@ Fixtures:
 
 # Standard library imports
 from builtins import Exception, range, str
-from datetime import timedelta
+from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
@@ -238,3 +238,99 @@ def email_service():
         mock_service.send_verification_email.return_value = None
         mock_service.send_user_email.return_value = None
         return mock_service
+
+@pytest.fixture(scope="function")
+async def specific_nickname_user(db_session: AsyncSession):
+    user = User(
+        nickname="specific_nickname",
+        email="specific_nickname@example.com",
+        first_name="Specific",
+        last_name="Nickname",
+        hashed_password="securepassword",
+        role=UserRole.AUTHENTICATED,
+        is_locked=False,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    return user
+
+@pytest.fixture(scope="function")
+async def specific_email_user(db_session: AsyncSession):
+    user = User(
+        nickname="emailuser",
+        email="specific_email@example.com",
+        first_name="Email",
+        last_name="User",
+        hashed_password="securepassword",
+        role=UserRole.AUTHENTICATED,
+        is_locked=False,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    return user
+
+@pytest.fixture(scope="function")
+async def role_user(db_session: AsyncSession):
+    user = User(
+        nickname="roleuser",
+        email="role_user@example.com",
+        first_name="Role",
+        last_name="User",
+        hashed_password="securepassword",
+        role=UserRole.MANAGER,
+        is_locked=False,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    return user
+
+@pytest.fixture(scope="function")
+async def locked_and_unlocked_users(db_session: AsyncSession):
+    locked_user = User(
+        nickname="lockeduser",
+        email="locked_user@example.com",
+        first_name="Locked",
+        last_name="User",
+        hashed_password="securepassword",
+        role=UserRole.AUTHENTICATED,
+        is_locked=True,
+    )
+    unlocked_user = User(
+        nickname="unlockeduser",
+        email="unlocked_user@example.com",
+        first_name="Unlocked",
+        last_name="User",
+        hashed_password="securepassword",
+        role=UserRole.AUTHENTICATED,
+        is_locked=False,
+    )
+    db_session.add_all([locked_user, unlocked_user])
+    await db_session.commit()
+    return locked_user, unlocked_user
+
+@pytest.fixture(scope="function")
+async def users_with_dates(db_session: AsyncSession):
+    now = datetime.utcnow()
+    old_user = User(
+        nickname="olduser",
+        email="old_user@example.com",
+        first_name="Old",
+        last_name="User",
+        hashed_password="securepassword",
+        role=UserRole.AUTHENTICATED,
+        is_locked=False,
+        created_at=now - timedelta(days=10)
+    )
+    new_user = User(
+        nickname="newuser",
+        email="new_user@example.com",
+        first_name="New",
+        last_name="User",
+        hashed_password="securepassword",
+        role=UserRole.AUTHENTICATED,
+        is_locked=False,
+        created_at=now
+    )
+    db_session.add_all([old_user, new_user])
+    await db_session.commit()
+    return old_user, new_user

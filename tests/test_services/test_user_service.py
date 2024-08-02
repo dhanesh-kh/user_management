@@ -214,3 +214,15 @@ async def test_search_users_with_no_results(db_session):
     search_params = UserFilter(username="non_existent_nickname")
     result_users = await UserService.search_users(db_session, search_params=search_params)
     assert len(result_users) == 0
+
+# Test when email already exists
+async def test_create_user_with_duplicate_email(db_session, email_service):
+    user_data = {
+        "nickname": generate_nickname(),
+        "email": "duplicate_email@example.com",
+        "password": "UniquePassword123!",
+        "role": UserRole.AUTHENTICATED.name
+    }
+    await UserService.create(db_session, user_data, email_service)
+    user = await UserService.create(db_session, user_data, email_service)
+    assert user is None  # or assert an appropriate error is raised

@@ -226,3 +226,19 @@ async def test_create_user_with_duplicate_email(db_session, email_service):
     await UserService.create(db_session, user_data, email_service)
     user = await UserService.create(db_session, user_data, email_service)
     assert user is None  # or assert an appropriate error is raised
+
+# Test partial username search
+async def test_search_users_by_partial_username_match(db_session, specific_nickname_user: User):
+    search_params = UserFilter(username="specific")
+    result_users = await UserService.search_users(db_session, search_params=search_params)
+    print("Result Users:", [user.nickname for user in result_users])  # Debug output
+    assert any(user.nickname == "specific_nickname" for user in result_users), "No user found with a partial username match"
+    
+# Test partial email search
+async def test_search_users_by_partial_email_match(db_session, specific_email_user: User):
+    search_params = UserFilter(email="specific_email")
+    result_users = await UserService.search_users(db_session, search_params=search_params)
+    print("Result Users:", [user.email for user in result_users])  # Debug output
+    assert any(user.email == "specific_email@example.com" for user in result_users), "No user found with a partial email match"
+
+
